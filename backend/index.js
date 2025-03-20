@@ -6,7 +6,7 @@ const path = require('path');
 const axios = require('axios');
 const csv = require('fast-csv');
 const app = express();
-const port = process.env.PORT || 5000;
+const port = process.env.PORT || 5000; 
 
 // Create directories for storing data
 const dataDir = path.join(__dirname, 'river_data');
@@ -246,48 +246,46 @@ app.get('/api/collect-river-data', async (req, res) => {
   try {
     // Hard-coded coordinates for Varanasi area of Ganges River
     const coordinates = [[83.00, 25.20], [83.00, 25.40], [83.30, 25.40], [83.30, 25.20]];
-    
+
     // Time range to analyze (can be modified as needed)
     const startDate = req.query.startDate || '2020-01-01';
     const endDate = req.query.endDate || '2023-12-31';
-    
+
     // Get 3-month intervals
     const intervals = getDateIntervalsThreeMonths(startDate, endDate);
     console.log(`Processing ${intervals.length} intervals from ${startDate} to ${endDate}`);
-    
+
     // Create a CSV file for storing all data
     const timestamp = new Date().getTime();
     const csvFilePath = path.join(csvDir, `ganges_data_${timestamp}.csv`);
     const csvHeaders = [
-      'interval_start', 'interval_end', 
+      'interval_start', 'interval_end',
       'image_date', 'natural_image_url',
-      'mean_temperature', 'max_temperature', 'min_temperature', 
+      'mean_temperature', 'max_temperature', 'min_temperature',
       'precipitation', 'pressure', 'soil_moisture', 'runoff',
       'ndwi_mean', 'ndwi_min', 'ndwi_max', 'mndwi_mean', 'mndwi_min', 'mndwi_max'
     ];
-    
+
     const writableStream = fs.createWriteStream(csvFilePath);
     const csvStream = csv.format({ headers: csvHeaders });
     csvStream.pipe(writableStream);
-    
+
     // Process each interval
     const results = [];
     const geometry = ee.Geometry.Polygon([coordinates]);
-    
+
     for (const interval of intervals) {
       try {
         console.log(`Processing interval: ${interval.start} to ${interval.end}`);
-        
+
         // Get Sentinel-2 imagery for this interval
         const collection = ee.ImageCollection('COPERNICUS/S2_SR')
           .filterDate(interval.start, interval.end)
           .filterBounds(geometry)
           .filter(ee.Filter.lt('CLOUDY_PIXEL_PERCENTAGE', 10))
           .sort('CLOUDY_PIXEL_PERCENTAGE');
-        
-        // Get the count of images
+
         const count = collection.size().getInfo();
-        
         if (count === 0) {
           console.log(`No images found for interval ${interval.start} to ${interval.end}`);
           results.push({
@@ -297,63 +295,56 @@ app.get('/api/collect-river-data', async (req, res) => {
           });
           continue;
         }
-        
+
         // Get the best image
         const image = collection.first();
         const imageDate = ee.Date(image.get('system:time_start')).format('YYYY-MM-dd').getInfo();
-        
-        // Calculate water indices
+
+        // Fetch climate data
+        const climateData = await getTempClimateData(geometry, imageDate);
+
+        // Fetch water indices
         const waterIndices = await calculateWaterIndices(image, geometry);
-        
-        // Get climate data for the image date
-        const climateData = await getClimateData(geometry, imageDate);
-        
-        // Create natural color visualization
-        const naturalVis = {
-          bands: ['B4', 'B3', 'B2'],
-          min: 0,
-          max: 3000,
-          gamma: 1.3
-        };
-        
+
         // Generate natural image URL
+        const naturalVis = { bands: ['B4', 'B3', 'B2'], min: 0, max: 3000, gamma: 1.3 };
         const naturalUrl = await image.getThumbURL({
           ...naturalVis,
           region: geometry,
           scale: 10,
           format: 'png'
         });
-        
-        // Write data to CSV
+
+        // Write complete data to CSV
         csvStream.write({
           interval_start: interval.start,
           interval_end: interval.end,
           image_date: imageDate,
           natural_image_url: naturalUrl,
-          mean_temperature: climateData.mean_2m_air_temperature,
-          max_temperature: climateData.max_2m_air_temperature,
-          min_temperature: climateData.min_2m_air_temperature,
-          precipitation: climateData.total_precipitation,
-          pressure: climateData.surface_pressure,
-          soil_moisture: climateData.soil_moisture,
-          runoff: climateData.runoff,
-          ndwi_mean: waterIndices.ndwi_mean,
-          ndwi_min: waterIndices.ndwi_min,
-          ndwi_max: waterIndices.ndwi_max,
-          mndwi_mean: waterIndices.mndwi_mean,
-          mndwi_min: waterIndices.mndwi_min,
-          mndwi_max: waterIndices.mndwi_max
+          mean_temperature: climateData.mean_2m_air_temperature || 0,
+          max_temperature: climateData.max_2m_air_temperature || 0,
+          min_temperature: climateData.min_2m_air_temperature || 0,
+          precipitation: climateData.total_precipitation || 0,
+          pressure: climateData.surface_pressure || 0,
+          soil_moisture: climateData.soil_moisture || 0,
+          runoff: climateData.runoff || 0,
+          ndwi_mean: waterIndices.ndwi_mean || 0,
+          ndwi_min: waterIndices.ndwi_min || 0,
+          ndwi_max: waterIndices.ndwi_max || 0,
+          mndwi_mean: waterIndices.mndwi_mean || 0,
+          mndwi_min: waterIndices.mndwi_min || 0,
+          mndwi_max: waterIndices.mndwi_max || 0
         });
-        
+
         results.push({
           interval: interval,
           success: true,
           imageDate: imageDate,
           naturalImageUrl: naturalUrl
         });
-        
+
         console.log(`Successfully processed data for ${imageDate}`);
-        
+
       } catch (intervalError) {
         console.error(`Error processing interval ${interval.start} to ${interval.end}:`, intervalError);
         results.push({
@@ -363,19 +354,78 @@ app.get('/api/collect-river-data', async (req, res) => {
         });
       }
     }
-    
+
     csvStream.end();
-    
+
     res.json({
       success: true,
       message: `Processed ${results.length} intervals`,
       csvFilePath: csvFilePath,
       results: results
     });
-    
+
   } catch (error) {
     console.error('Error in collect-river-data:', error);
     res.status(500).json({ error: 'Failed to collect river data', details: error.message });
+  }
+});
+
+
+
+async function getTempClimateData(geometry, date) {
+  try {
+    // Extend the date range to avoid missing data issues
+    const startDate = ee.Date(date).advance(-1, 'day'); 
+    const endDate = ee.Date(date).advance(1, 'day');
+
+    const climateCollection = ee.ImageCollection('ECMWF/ERA5_LAND/HOURLY')
+      .filterDate(startDate, endDate)
+      .filterBounds(geometry);
+
+    // Check if the collection has data
+    const count = climateCollection.size().getInfo();
+    if (count === 0) {
+      console.warn('No climate data available for the specified date and location.');
+      return null;
+    }
+
+    // Compute mean values from the available images
+    const climateImage = climateCollection.mean();
+    const climateData = climateImage.reduceRegion({
+      reducer: ee.Reducer.mean(),
+      geometry: geometry,
+      scale: 1000,
+      bestEffort: true
+    });
+
+    const data = climateData.getInfo();
+    return {
+      mean_2m_air_temperature: data['temperature_2m'] || 0,
+      max_2m_air_temperature: data['temperature_2m_max'] || 0,
+      min_2m_air_temperature: data['temperature_2m_min'] || 0,
+      total_precipitation: data['total_precipitation'] || 0,
+      surface_pressure: data['surface_pressure'] || 0,
+      soil_moisture: data['volumetric_soil_water_layer_1'] || 0,
+      runoff: data['surface_runoff'] || 0
+    };
+  } catch (error) {
+    console.error('Error fetching climate data:', error);
+    throw new Error('Failed to fetch climate data');
+  }
+}
+app.get('/api/fetch-climate-data', async (req, res) => {
+  try {
+    const { lat, lon, date } = req.query;
+    if (!lat || !lon || !date) {
+      return res.status(400).json({ error: 'Missing required parameters: lat, lon, date' });
+    }
+
+    const geometry = ee.Geometry.Point([parseFloat(lon), parseFloat(lat)]);
+    const climateData = await getTempClimateData(geometry, date);
+
+    res.json({ success: true, climateData });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to fetch climate data', details: error.message });
   }
 });
 
