@@ -24,3 +24,5 @@ miniproject2-454214-8aa4a6f95a0b.json
 *.njsproj
 *.sln
 *.sw?
+csv/
+.node-xmlhttprequest-sync-*

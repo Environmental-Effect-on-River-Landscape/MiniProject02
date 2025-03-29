@@ -1,5 +1,5 @@
 import React from 'react';
-
+import changeimg from './assets/changes_show.png';
 function App() {
   return (
     <div className="font-sans text-gray-800">
@@ -90,13 +90,13 @@ function App() {
               <h2 className="text-3xl font-bold mb-6 text-blue-900">About Our Research</h2>
               <p className="mb-4 text-lg">Our research leverages cutting-edge satellite technology and machine learning algorithms to monitor rivers worldwide. By analyzing temporal changes in water bodies, we can identify patterns that precede natural disasters.</p>
               <p className="mb-6 text-lg">This innovative approach enables early detection of abnormal water level fluctuations, providing crucial time for disaster preparedness and response.</p>
-              <div className="flex gap-4 items-center">
+              {/* <div className="flex gap-4 items-center">
                 <div className="h-1 w-12 bg-blue-500"></div>
                 <p className="text-blue-800 font-medium">Founded in 2023 at Global Hydrology Institute</p>
-              </div>
+              </div> */}
             </div>
             <div className="md:w-1/2 rounded-xl overflow-hidden shadow-xl">
-              <img src="/api/placeholder/600/400" alt="Satellite image analysis of river" className="w-full h-auto" />
+              <img src={changeimg} alt="Satellite image analysis of river" className="w-full h-auto" />
             </div>
           </div>
         </div>
