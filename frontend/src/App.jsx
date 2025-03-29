@@ -1,5 +1,7 @@
 import React from 'react';
 import changeimg from './assets/changes_show.png';
+import beforesegmented from './assets/before_segmented.jpg';
+import after from './assets/after.png';
 function App() {
   return (
     <div className="font-sans text-gray-800">
@@ -63,11 +65,11 @@ function App() {
         <div className="container mx-auto px-6">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-6 text-center">
             <div>
-              <p className="text-3xl font-bold text-blue-900">95%</p>
+              <p className="text-3xl font-bold text-blue-900">92%</p>
               <p className="text-gray-600">Prediction Accuracy</p>
             </div>
             <div>
-              <p className="text-3xl font-bold text-blue-900">23</p>
+              <p className="text-3xl font-bold text-blue-900">5+</p>
               <p className="text-gray-600">Rivers Monitored</p>
             </div>
             <div>
@@ -149,18 +151,18 @@ function App() {
           <div className="mb-16">
             <div className="flex flex-col md:flex-row justify-center gap-8 mb-12">
               <div className="bg-white p-6 rounded-xl shadow-lg text-center flex-1">
-                <h4 className="text-lg font-bold mb-4 text-blue-900">Before Flood Event</h4>
+                <h4 className="text-lg font-bold mb-4 text-blue-900">Before Image Segmentation</h4>
                 <div className="rounded-lg overflow-hidden">
-                  <img src="/api/placeholder/500/300" alt="River before flood" className="w-full h-auto" />
+                  <img src={beforesegmented} alt="River before flood" className="w-full h-auto" />
                 </div>
-                <p className="mt-4 text-gray-700">Normal water levels recorded on May 12, 2024</p>
+                <p className="mt-4 text-gray-700">Normal water levels recorded on Dec 01, 2024</p>
               </div>
               <div className="bg-white p-6 rounded-xl shadow-lg text-center flex-1">
-                <h4 className="text-lg font-bold mb-4 text-blue-900">During Flood Event</h4>
+                <h4 className="text-lg font-bold mb-4 text-blue-900">After Segmentation</h4>
                 <div className="rounded-lg overflow-hidden">
-                  <img src="/api/placeholder/500/300" alt="River during flood" className="w-full h-auto" />
+                  <img src={after} alt="River during flood" className="w-full h-auto" />
                 </div>
-                <p className="mt-4 text-gray-700">Significant water level increase detected on May 15, 2024</p>
+                <p className="mt-4 text-gray-700">Water area detected with the Area</p>
               </div>
             </div>
             <div className="bg-white p-8 rounded-xl shadow-lg">
@@ -170,7 +172,7 @@ function App() {
                   <ul className="space-y-4">
                     <li className="flex gap-3">
                       <div className="flex-shrink-0 text-blue-500">✓</div>
-                      <p>Detected significant water level variations with 95% accuracy in monitored rivers</p>
+                      <p>Detected significant water level variations with 92% accuracy in monitored rivers</p>
                     </li>
                     <li className="flex gap-3">
                       <div className="flex-shrink-0 text-blue-500">✓</div>
